@@ -1,0 +1,112 @@
+create database favorite_products_db;
+create user 'fp'@'localhost' identified by 'fp';
+grant all privileges on favorite_products_db.* to 'fp'@'localhost';
+
+use favorite_products_db;
+
+/* users table */
+create table users(
+	User_ID varchar(255) not null primary key,
+	User_Name varchar(255) not null,
+	Email varchar(255) not null
+);
+
+/* accounts table */
+create table accounts (
+	Account_ID int auto_increment primary key,
+	User_ID varchar(255) not null,
+	Account varchar(255) not null unique,
+	foreign key (User_ID) references users(User_ID)
+);
+
+/* products table */
+create table products(
+	No int auto_increment primary key,
+	Product_Name varchar(255) not null,
+	Price decimal(10,3) not null,
+	Fee_Rate decimal(5,3) not null
+);
+
+/* Like List */
+create table Like_List(
+	SN int auto_increment primary key,
+	User_ID varchar(255) not null,
+	Account varchar(255) not null,
+	Product_ID int not null,
+	Quantity int not null,
+	Total_Fee decimal(10,3) not null,
+	Total_Amount decimal(10,3) not null,
+	foreign key (User_ID) references users(User_ID),
+	foreign key (Product_ID) references products(No),
+	foreign key (Account) references accounts(Account)
+);
+
+
+/* Stored Procedures */
+delimiter //
+
+/* add product */
+create procedure add_favorite_product(
+	in p_user_id varchar(255),
+	in p_product_id int,
+	in p_quantity int,
+	in p_account varchar(255)
+)
+begin
+	declare p_total_amount decimal(10,3);
+	declare p_total_fee decimal(10,3);
+
+	/* count total amount */
+	select Price * p_quantity into p_total_amount from products where No = p_product_id;
+
+	/* count total fee */
+	select p_total_amount * Fee_Rate into p_total_fee from products where No = p_product_id;
+
+	/* insert to Like List */
+	insert into Like_List (User_ID, Account, Product_ID, Quantity, Total_Fee, Total_Amount)
+	values (p_user_id, p_account, p_product_id, p_quantity, p_totla_fee, p_total_amount);
+end //
+
+/* get favorite product info */
+create procedure get_favorite_products(in p_user_id varchar(255))
+begin
+	select Like_List.SN, products.Product_Name, Like_List.Quantity, accounts.account, Like_List.Total_Amount, Like_List.Total_Fee, users.Email
+	from Like_List
+	join products on Like_List.Product_ID = products.No
+	join users on Like_List.User_ID = users.User_ID
+	join accounts on Like_List.Account = accounts.Account
+	where Like_List.User_ID = p_user_id;
+end //
+
+/* delete favorite product */
+create prcedure delete_favorite_product(in p_sn int)
+
+begin
+	delete from Like_List where SN = p_sn;
+end //
+
+/* update */
+create prcedure update_favorite_products(
+	in p-sn int,
+	in p_product_id int,
+	in p_quantity int
+)
+begin
+	declare p_total_amount decimal(10,3);
+	declare p_total_fee decimal(10,3);
+
+	/* count new total amount */
+	select price * p_quantity into p_total_amount from products where No = p_product_id;
+	
+	/* count new total fee */
+	select p_total_amount * Fee_Rate / 100 into p_total_fee from products where No = p_product_id;
+
+	/* update */
+	update Like_List
+	set Product_ID = p_product_id, Quantity = p_quantity, Total_Fee = p_total_fee, Total_Amount = p_total_amount
+	where SN = p_sn;
+
+end //
+
+delimiter ;
+
